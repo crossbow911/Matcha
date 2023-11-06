@@ -1,8 +1,4 @@
 import numpy as np
-from utilities import pole, P2R, plot_bb
-
-
-
 from .utilities import pole, P2R, plot_bb
 
 def bb1_cut_bb2(bb1, bb2):
