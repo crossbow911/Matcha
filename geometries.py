@@ -3,6 +3,7 @@ from utilities import pole, P2R, plot_bb
 
 
 
+from .utilities import pole, P2R, plot_bb
 
 def bb1_cut_bb2(bb1, bb2):
     # returns True if the two bounding boxes intersect
