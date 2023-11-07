@@ -1,66 +1,5 @@
 import numpy as np
-from .utilities import pole, P2R, plot_bb
-
-def bb1_cut_bb2(bb1, bb2):
-    # returns True if the two bounding boxes intersect
-    return not (bb1[1].real<bb2[0].real or bb2[1].real<bb1[0].real or bb1.imag[1]<bb2.imag[0] or bb2.imag[1]<bb1.imag[0])
-
-def split_half(curve):
-    if isinstance(curve, Bezier):
-        p0, p1, p2, p3 = curve.points
-        p4 = 0.5*p0 + 0.5*p1
-        p5 = 0.5*p1 + 0.5*p2
-        p6 = 0.5*p2 + 0.5*p3
-        p7 = 0.5*p4 + 0.5*p5
-        p8 = 0.5*p5 + 0.5*p6
-        p9 = 0.5*p7 + 0.5*p8
-        return Bezier([p0, p4, p7, p9]), Bezier([p9, p8, p6, p3])
-    
-    elif isinstance(curve, Line):
-        p0, p2 = curve.points
-        p1 = (p0+p2)/2
-        return Line([p0, p1]), Line([p1, p2])    
-    
-    elif isinstance(curve, Arc):        
-        return Arc(curve.start_point, curve.at(0.5), curve.radius), Arc(curve.at(0.5), curve.end_point, curve.radius)
-    
-def find_intersection(obj1, obj2):    
-    threshold=1e-10
-    if not bb1_cut_bb2(obj1.tight_bounding_box(), obj2.tight_bounding_box()): 
-        return []
-    circumference = (obj1.tbb[1]-obj1.tbb[0]).real+(obj1.tbb[1]-obj1.tbb[0]).imag + \
-        (obj2.tbb[1]-obj2.tbb[0]).real+(obj2.tbb[1]-obj2.tbb[0]).imag
-    if circumference < threshold:        
-        plot_bb(obj1.tight_bounding_box())        
-        plot_bb(obj2.tight_bounding_box())
-        return [(obj1.tbb[0]+obj1.tbb[1])/2]
-    obj1a, obj1b = split_half(obj1)
-    obj2a, obj2b = split_half(obj2)
-    a, b, c, d = find_intersection(obj1a, obj2a), find_intersection(obj1a, obj2b), find_intersection(obj1b, obj2a), find_intersection(obj1b, obj2b)
-    intersections_found = []
-    n=0
-    if a: 
-        intersections_found += a  
-        n+=1
-    if b: 
-        intersections_found += b 
-        n+=1 
-    if c: 
-        intersections_found += c  
-        n+=1
-    if d: 
-        intersections_found += d  
-        n+=1
-    if n>=2:        
-        del_list=[]
-        for p1i in range(len(intersections_found)):
-            for p2i in range(p1i+1, len(intersections_found)):
-                if np.abs(intersections_found[p1i]-intersections_found[p2i]) < threshold*2:
-                    del_list.append(p2i)
-        del_list = sorted(list(set(del_list)))
-        for pi in del_list[::-1]:
-            del intersections_found[pi]
-    return intersections_found
+from utilities import pole, P2R, plot_bb
 
 class Bezier():
     def __init__(self, points):
@@ -103,31 +42,20 @@ class Bezier():
     def tight_bounding_box(self):
         x_candidates = [self.points[0].real, self.points[-1].real]      
         y_candidates = [self.points[0].imag, self.points[-1].imag]
+        
         a = -3*self.points[0]+9*self.points[1]-9*self.points[2]+3*self.points[3]
         b =  6*self.points[0]-12*self.points[1]+6*self.points[2]
         c = -3*self.points[0]+3*self.points[1]
-        tx0 = (-b.real+np.sqrt(b.real**2-4*a.real*c.real))/(2*a.real)
-        tx1 = (-b.real-np.sqrt(b.real**2-4*a.real*c.real))/(2*a.real)
-        ty0 = (-b.imag+np.sqrt(b.imag**2-4*a.imag*c.imag))/(2*a.imag)
-        ty1 = (-b.imag-np.sqrt(b.imag**2-4*a.imag*c.imag))/(2*a.imag)
-        
-        tx0 = tx0.real[abs(tx0.imag)<1e-6]
-        for tn in tx0[(tx0>0) & (tx0<1)]:
+
+        p_r_roots = np.polynomial.Polynomial([c.real,b.real,a.real]).roots()
+        p_i_roots = np.polynomial.Polynomial([c.imag,b.imag,a.imag]).roots()
+
+        for tn in p_r_roots[(p_r_roots>0) & (p_r_roots<1)]:
             x_candidates.append(self.at(tn).real)
-        tx1 = tx1.real[abs(tx1.imag)<1e-6]
-        for tn in tx1[(tx1>0) & (tx1<1)]:
-            x_candidates.append(self.at(tn).real)
-        x_candidates=np.array(x_candidates)    
-        
-        tx0 = ty0.real[abs(ty0.imag)<1e-6]
-        for tn in ty0[(ty0>0) & (ty0<1)]:
+        for tn in p_i_roots[(p_i_roots>0) & (p_i_roots<1)]:
             y_candidates.append(self.at(tn).imag)
-        ty1 = ty1.real[abs(ty1.imag)<1e-6]
-        for tn in ty1[(ty1>0) & (ty1<1)]:
-            y_candidates.append(self.at(tn).imag)
-        y_candidates=np.array(y_candidates)    
         
-        self.tbb = np.array([x_candidates.min()+1j*y_candidates.min(), x_candidates.max()+1j*y_candidates.max()])
+        self.tbb = np.array([min(x_candidates)+1j*min(y_candidates), max(x_candidates)+1j*max(y_candidates)])
         self.tbb_area = np.abs((self.tbb.real[0]-self.tbb.real[1])*(self.tbb.imag[0]-self.tbb.imag[1]))
         return self.tbb
     
@@ -208,3 +136,66 @@ class Arc():
         self.tbb = np.array([min(x_candidates)+1j*min(y_candidates), max(x_candidates)+1j*max(y_candidates)])
         self.tbb_area = np.abs((self.tbb.real[0]-self.tbb.real[1])*(self.tbb.imag[0]-self.tbb.imag[1]))
         return self.tbb
+    
+
+
+def bb1_cut_bb2(bb1, bb2):
+    # returns True if the two bounding boxes intersect
+    return not (bb1[1].real<bb2[0].real or bb2[1].real<bb1[0].real or bb1.imag[1]<bb2.imag[0] or bb2.imag[1]<bb1.imag[0])
+
+def split_half(curve):
+    if isinstance(curve, Bezier):
+        p0, p1, p2, p3 = curve.points
+        p4 = 0.5*p0 + 0.5*p1
+        p5 = 0.5*p1 + 0.5*p2
+        p6 = 0.5*p2 + 0.5*p3
+        p7 = 0.5*p4 + 0.5*p5
+        p8 = 0.5*p5 + 0.5*p6
+        p9 = 0.5*p7 + 0.5*p8
+        return Bezier([p0, p4, p7, p9]), Bezier([p9, p8, p6, p3])
+    
+    elif isinstance(curve, Line):
+        p0, p2 = curve.points
+        p1 = (p0+p2)/2
+        return Line([p0, p1]), Line([p1, p2])    
+    
+    elif isinstance(curve, Arc):        
+        return Arc(curve.start_point, curve.at(0.5), curve.radius), Arc(curve.at(0.5), curve.end_point, curve.radius)
+    
+def find_intersection(obj1, obj2):    
+    threshold=1e-10
+    if not bb1_cut_bb2(obj1.tight_bounding_box(), obj2.tight_bounding_box()): 
+        return []
+    circumference = (obj1.tbb[1]-obj1.tbb[0]).real+(obj1.tbb[1]-obj1.tbb[0]).imag + \
+        (obj2.tbb[1]-obj2.tbb[0]).real+(obj2.tbb[1]-obj2.tbb[0]).imag
+    if circumference < threshold:        
+        plot_bb(obj1.tight_bounding_box())        
+        plot_bb(obj2.tight_bounding_box())
+        return [(obj1.tbb[0]+obj1.tbb[1])/2]
+    obj1a, obj1b = split_half(obj1)
+    obj2a, obj2b = split_half(obj2)
+    a, b, c, d = find_intersection(obj1a, obj2a), find_intersection(obj1a, obj2b), find_intersection(obj1b, obj2a), find_intersection(obj1b, obj2b)
+    intersections_found = []
+    n=0
+    if a: 
+        intersections_found += a  
+        n+=1
+    if b: 
+        intersections_found += b 
+        n+=1 
+    if c: 
+        intersections_found += c  
+        n+=1
+    if d: 
+        intersections_found += d  
+        n+=1
+    if n>=2:        
+        del_list=[]
+        for p1i in range(len(intersections_found)):
+            for p2i in range(p1i+1, len(intersections_found)):
+                if np.abs(intersections_found[p1i]-intersections_found[p2i]) < threshold*2:
+                    del_list.append(p2i)
+        del_list = sorted(list(set(del_list)))
+        for pi in del_list[::-1]:
+            del intersections_found[pi]
+    return intersections_found

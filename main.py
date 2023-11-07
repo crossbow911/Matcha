@@ -1,10 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
-
-from geometries import Arc, Bezier, Line, find_intersection
-
+from utilities import *
+from geometries import *
 
 if __name__=="__main__":
+    ''' Test cases '''
     fix, ax = plt.subplots(figsize=(10,4))
     t=np.linspace(0,1,10000)
 
