@@ -78,39 +78,58 @@ class Line():
 class Arc():
     def __init__(self, start_point, end_point, radius):
         """
-        input:  center (point coords in x + iy)
-                start_point (point coords in x + iy)
-                end_point (point coords in x + iy)
+        the Arc path leads from start_point to end_point with a constant curvature 1/radius, 
+        where radius>0 defines a left bended (counterclockwise) curve and r<0 defines a right bended (clockwise) curve
+        For internal calculations only, curves are converted to counterclockwise movement 
+        with (s_point, e_point)=(end_point, start_point) if r<0,  else: (s_point, e_point)=(start_point, end_point)
+        angles (self.alpha_1, self.alpha_2) refer to (self.s_point, self.e_point)
         """
-        assert np.abs(end_point-start_point) <= 2*radius
+        assert np.abs(end_point-start_point) <= np.abs(2*radius)
         self.center = P2R(np.sqrt(radius**2-np.abs((end_point - start_point)/2)**2), \
-                   np.angle(end_point - start_point) + np.pi/2) + (end_point + start_point)/2
-        self.radius = radius
+                          np.angle(end_point - start_point) + np.pi/2 - np.pi*(radius<0)) + \
+                      (end_point + start_point)/2
+        self.radius = radius # can be positive or negative
         self.start_point = start_point
         self.end_point = end_point
-        self.alpha_1 = np.angle(self.start_point - self.center) # 0=<alpha_1<2*pi
-        self.alpha_2 = np.angle(self.end_point - self.center) + 2*np.pi*(start_point==end_point) # 0 =< alpha_1 < alpha_2 < 4*pi
-        self.alpha_2 += 2*np.pi*(self.alpha_1>self.alpha_2)
-        # angles counterclockwise angle measured from the positive x-axis
+        
+        if self.radius>0:
+            self.s_point, self.e_point = start_point, end_point
+        else:
+            self.s_point, self.e_point = end_point, start_point
+
+        self.alpha_1 = np.angle(self.s_point - self.center)%(2*np.pi) # 0=<alpha_1<2*pi
+        self.alpha_2 = np.angle(self.e_point - self.center)%(2*np.pi) # 0 =< alpha_1 < alpha_2 < 4*pi
+        self.alpha_2 += 2*np.pi*(self.alpha_1>=self.alpha_2)
+            # angles are measured counterclockwise from the positive x-axis
         
     def closest_point(self, point):
-        alpha_p = np.angle(point - self.center) # 0=<alpha<2*pi        
-        alpha_3 = ((self.alpha_1 + self.alpha_2)/2 + np.pi) % (2 * np.pi) # 0=<alpha_3<2*pi
-        
-        if self.alpha_1 <= alpha_p and alpha_p <= self.alpha_2:
-            return self.at((alpha_p - self.alpha_1) / (self.alpha_2 - self.alpha_1))
-        
-        alpha_bool = ((alpha_p - alpha_3)%(2*np.pi))*(self.start_point!=self.end_point)
+        alpha_p = np.angle(point - self.center)%(2*np.pi) # 0=<alpha<2*pi        
+        alpha_3 = ((self.alpha_1 + self.alpha_2)/2 + np.pi) %(2*np.pi) # 0=<alpha_3<2*pi
+
+        # closest_point lies on the arc
+        if (self.alpha_1 <= alpha_p and alpha_p <= self.alpha_2) or (self.alpha_1 <= alpha_p+2*np.pi and alpha_p+2*np.pi <= self.alpha_2):
+            if self.radius>0:
+                return self.at((alpha_p - self.alpha_1) / (self.alpha_2 - self.alpha_1))
+            else:
+                return self.at(1- (alpha_p - self.alpha_1) / (self.alpha_2 - self.alpha_1))
+
+        alpha_bool = ((alpha_p - alpha_3)%(2*np.pi))*(self.s_point!=self.e_point)
         
         if alpha_bool > np.pi:       
-            return self.end_point
+            return self.e_point
         elif alpha_bool > 0:
-            return self.start_point            
-        else:
-            return self.at((alpha_p - self.alpha_1) / (self.alpha_2 - self.alpha_1))
+            return self.s_point            
+
          
-    def at(self, t):        
-        return P2R(self.radius, self.alpha_1 * (1-t) + self.alpha_2 * t) + self.center
+    def at(self, t):     
+        '''
+        t=0: self.start_point
+        t=1: self.end_point
+        '''
+        if self.radius>0:    
+            return P2R(self.radius, self.alpha_1 * (1-t) + self.alpha_2 * t) + self.center
+        else:    
+            return P2R(-self.radius, self.alpha_2 * (1-t) + self.alpha_1 * t) + self.center
         
     def tight_bounding_box(self):
         x_candidates = [self.start_point.real, self.end_point.real]      
