@@ -39,7 +39,7 @@ class Bezier():
         self.lbb = np.array([self.points.real.min()+1j*self.points.imag.min(), self.points.real.max()+1j*self.points.imag.max()])
         return self.lbb
     
-    def tight_bounding_box(self):
+    def bounding_box(self):
         x_candidates = [self.points[0].real, self.points[-1].real]      
         y_candidates = [self.points[0].imag, self.points[-1].imag]
         
@@ -65,12 +65,19 @@ class Line():
         self.points = np.array(points)
         #self.coeffs=[a,b] with f(t) = a * t + b
         self.coeffs = np.array([points[1]-points[0], points[0]])
+
+    def closest_point(self, point):
+        pp = point - self.coeffs[1] 
+        t = (self.coeffs[0].real * pp.real + self.coeffs[0].imag * pp.imag)/(self.coeffs[0].real**2 + self.coeffs[0].imag**2)
+        if t<=0:   return self.coeffs[1]
+        elif t>=1: return self.coeffs[0]+self.coeffs[1]
+        else:      return self.at(t)
     
     def at(self, t):
         #returns the bezier curve at points 0<t<1
         return self.coeffs[0] * t + self.coeffs[1]
     
-    def tight_bounding_box(self):
+    def bounding_box(self):
         self.tbb = np.array([self.points.real.min()+1j*self.points.imag.min(), self.points.real.max()+1j*self.points.imag.max()])
         self.tbb_area = np.abs((self.tbb.real[0]-self.tbb.real[1])*(self.tbb.imag[0]-self.tbb.imag[1]))
         return self.tbb    
@@ -131,7 +138,7 @@ class Arc():
         else:    
             return P2R(-self.radius, self.alpha_2 * (1-t) + self.alpha_1 * t) + self.center
         
-    def tight_bounding_box(self):
+    def bounding_box(self):
         x_candidates = [self.start_point.real, self.end_point.real]      
         y_candidates = [self.start_point.imag, self.end_point.imag]
         a = (self.start_point-self.center).imag>=0
@@ -183,13 +190,13 @@ def split_half(curve):
     
 def find_intersection(obj1, obj2):    
     threshold=1e-10
-    if not bb1_cut_bb2(obj1.tight_bounding_box(), obj2.tight_bounding_box()): 
+    if not bb1_cut_bb2(obj1.bounding_box(), obj2.bounding_box()): 
         return []
     circumference = (obj1.tbb[1]-obj1.tbb[0]).real+(obj1.tbb[1]-obj1.tbb[0]).imag + \
         (obj2.tbb[1]-obj2.tbb[0]).real+(obj2.tbb[1]-obj2.tbb[0]).imag
     if circumference < threshold:        
-        plot_bb(obj1.tight_bounding_box())        
-        plot_bb(obj2.tight_bounding_box())
+        plot_bb(obj1.bounding_box())        
+        plot_bb(obj2.bounding_box())
         return [(obj1.tbb[0]+obj1.tbb[1])/2]
     obj1a, obj1b = split_half(obj1)
     obj2a, obj2b = split_half(obj2)
