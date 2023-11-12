@@ -1,13 +1,53 @@
 import numpy as np
 from utilities import pole, P2R, plot_bb
+import svgpathtools
 
+'''
+Object hierarchy:
+
+svg input ->
+-List_of_Domains, List
+    -Domain, Medial axis transform will be calculated for every domain
+        -Exterior, List
+        -List_of_Interiors, List
+            -Loops, List
+                -Curves (Line, Arc, Bezier)
+'''
+
+
+'''
+Domains
+'''
+class Domain():
+    '''
+    A Domain is a single closed area. 
+    Its exterior is a closed loop, which can consist of several curve-segments.
+    It can also consist of a series of internal holes
+    '''
+    def __init__(self, exterior, interior=[]):
+        self.exterior = exterior
+        self.interior = interior
+
+    def __repr__(self):
+        return ("Domain")
+
+
+
+'''
+Curves
+'''
 class Bezier():
     def __init__(self, points):
         assert np.array(points).shape==(4,)
         self.points = np.array(points)
+        self.start_point = self.points[0]
+        self.end_point = self.points[-1]
         #self.coeffs=[a,b,c,d] with f(t) = a * t^3 + lb * t^2 + c * t^1 + d
         self.coeffs = np.einsum("i,ij",  self.points, np.array([[-1, 3, -3, 1], [3, -6, 3, 0], [-3, 3, 0, 0], [1, 0, 0, 0]]))
     
+    def __repr__(self):
+        return ("Bezier")
+
     def find_closest_point(self, point):        
         #candidates for values of t are 0, 1 and all extrema of the distance-function
         candidates=[0,1]
@@ -63,13 +103,18 @@ class Line():
     def __init__(self, points):
         assert np.array(points).shape==(2,)
         self.points = np.array(points)
+        self.start_point = self.points[0]
+        self.end_point = self.points[-1]
         #self.coeffs=[a,b] with f(t) = a * t + b
         self.coeffs = np.array([points[1]-points[0], points[0]])
 
+    def __repr__(self):
+        return ("Line")
+    
     def closest_point(self, point):
         pp = point - self.coeffs[1] 
         t = (self.coeffs[0].real * pp.real + self.coeffs[0].imag * pp.imag)/(self.coeffs[0].real**2 + self.coeffs[0].imag**2)
-        if t<=0:   return self.coeffs[1]
+        if   t<=0: return self.coeffs[1]
         elif t>=1: return self.coeffs[0]+self.coeffs[1]
         else:      return self.at(t)
     
@@ -108,7 +153,10 @@ class Arc():
         self.alpha_2 = np.angle(self.e_point - self.center)%(2*np.pi) # 0 =< alpha_1 < alpha_2 < 4*pi
         self.alpha_2 += 2*np.pi*(self.alpha_1>=self.alpha_2)
             # angles are measured counterclockwise from the positive x-axis
-        
+
+    def __repr__(self):
+        return ("Arc")    
+    
     def closest_point(self, point):
         alpha_p = np.angle(point - self.center)%(2*np.pi) # 0=<alpha<2*pi        
         alpha_3 = ((self.alpha_1 + self.alpha_2)/2 + np.pi) %(2*np.pi) # 0=<alpha_3<2*pi
@@ -164,6 +212,9 @@ class Arc():
         return self.tbb
     
 
+'''
+functions
+'''
 
 def bb1_cut_bb2(bb1, bb2):
     # returns True if the two bounding boxes intersect
@@ -225,3 +276,59 @@ def find_intersection(obj1, obj2):
         for pi in del_list[::-1]:
             del intersections_found[pi]
     return intersections_found
+
+def is_hole(closed_loop):
+    return sum_of_angles(closed_loop)==np.abs(sum_of_angles(closed_loop))
+
+def sum_of_angles(closed_loop):
+    angle_sum=0
+    angle = np.angle(closed_loop[0].end_point-closed_loop[0].start_point)-np.angle(closed_loop[-1].end_point-closed_loop[-1].start_point)
+    angle_sum+=(angle+np.pi)%(2*np.pi)-np.pi   
+    for n in range(1, len(closed_loop)):
+        angle = np.angle(closed_loop[n].end_point-closed_loop[n].start_point)-np.angle(closed_loop[n-1].end_point-closed_loop[n-1].start_point)
+        angle_sum+=(angle+np.pi)%(2*np.pi)-np.pi
+    return angle_sum
+
+def create_list_of_domains(svgPaths):
+    list_of_domains = []
+    for dn in range(len(svgPaths)):
+        exterior = []
+        interior = []
+        loop = [] 
+        start_of_loop = svgPaths[dn]._segments[0].start
+        cursor = start_of_loop
+        for n, s in enumerate(svgPaths[dn]._segments):
+            #print(type(s))
+            if isinstance(s, svgpathtools.path.CubicBezier):
+                loop.append(Bezier([s.start, s.control1, s.control2, s.end]))
+                cursor = s.end
+            elif isinstance(s, svgpathtools.path.Line):
+                loop.append(Line([s.start, s.end]))
+                cursor = s.end
+            elif isinstance(s, svgpathtools.path.Arc):
+                print("Input of Arcs not yet implemented")
+
+            if cursor == start_of_loop:
+                #print(loop, is_hole(loop))
+                if is_hole(loop): interior.append(loop)
+                else: exterior=loop
+                if n!=len(svgPaths[dn]._segments)-1:
+                    loop=[]
+                    start_of_loop = svgPaths[dn]._segments[n+1].start
+        if len(exterior)>0:
+            list_of_domains.append(Domain(exterior, interior))
+    return list_of_domains
+
+def print_domain_structure(list_of_domains):
+    for D in list_of_domains:
+        print(D)
+        print("    Exterior: ")
+        print("    ", D.exterior)
+        print("    Interior: ")
+        for I in D.interior:        
+            print("    ", I)
+    return None
+
+svgPaths, _ = svgpathtools.svg2paths(r"E:\-.-\Projekte\CNC\Macha\svg\test05.svg")
+list_of_domains = create_list_of_domains(svgPaths)
+print_domain_structure(list_of_domains)
