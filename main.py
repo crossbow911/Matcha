@@ -2,7 +2,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 from utilities import *
 from geometries import *
+import matplotlib.cm as cm
 
+'''
+ToDo:
+absolute positions of domains
+holes are not correct
+
+'''
 if __name__=="__main__":
     # ''' Test cases '''
     # fix, ax = plt.subplots(figsize=(10,4))
@@ -36,14 +43,40 @@ if __name__=="__main__":
     # ax.set_aspect("equal")
     # plt.show()
 
-    fix, ax = plt.subplots(figsize=(10,4))
-    t=np.linspace(0,1,10000)
+    # fix, ax = plt.subplots(figsize=(10,4))
+    # t=np.linspace(0,1,10000)
 
-    line1 = Line([1+1j,3+2j])
-    point = 2+1j
-    ax.plot(line1.at(t).real, line1.at(t).imag)
-    ax.plot(point.real, point.imag,"ro")
-    ax.plot([point.real,line1.closest_point(point).real], [point.imag,line1.closest_point(point).imag],"r--")
+    # line1 = Line([1+1j,3+2j])
+    # point = 2+1j
+    # ax.plot(line1.at(t).real, line1.at(t).imag)
+    # ax.plot(point.real, point.imag,"ro")
+    # ax.plot([point.real,line1.closest_point(point).real], [point.imag,line1.closest_point(point).imag],"r--")
+
+    # ax.set_aspect("equal")
+    # plt.show()
+
+
+    svgPaths, _ = svgpathtools.svg2paths(r"E:\-.-\Projekte\CNC\Macha\svg\test05.svg")
+    list_of_domains = create_list_of_domains(svgPaths)
+    #print_domain_structure(list_of_domains)
+
+    fig, ax = plt.subplots(figsize=(14,8))
+
+    t=np.linspace(0,1,1000)
+    print(list_of_domains[0].exterior)
+
+    for nn in range(len(list_of_domains)):
+        for curve in list_of_domains[nn].exterior:
+            cr = curve.at(t).reshape(100,10)
+            for n in range(100):
+                plt.plot(cr[n].real, cr[n].imag, color=cm.jet(n/100))
+
+        for inr in list_of_domains[nn].interior:
+            for curve in inr:
+                cr = curve.at(t).reshape(100,10)
+                for n in range(100):
+                    plt.plot(cr[n].real, cr[n].imag, color=cm.jet(n/100))
+            
 
     ax.set_aspect("equal")
     plt.show()

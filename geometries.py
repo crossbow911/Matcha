@@ -278,9 +278,11 @@ def find_intersection(obj1, obj2):
     return intersections_found
 
 def is_hole(closed_loop):
-    return sum_of_angles(closed_loop)==np.abs(sum_of_angles(closed_loop))
+    soa = sum_of_angles(closed_loop)
+    return soa==np.abs(soa)
 
 def sum_of_angles(closed_loop):
+    #print("len(closed_loop): ", len(closed_loop))
     angle_sum=0
     angle = np.angle(closed_loop[0].end_point-closed_loop[0].start_point)-np.angle(closed_loop[-1].end_point-closed_loop[-1].start_point)
     angle_sum+=(angle+np.pi)%(2*np.pi)-np.pi   
@@ -299,17 +301,20 @@ def create_list_of_domains(svgPaths):
         cursor = start_of_loop
         for n, s in enumerate(svgPaths[dn]._segments):
             #print(type(s))
-            if isinstance(s, svgpathtools.path.CubicBezier):
+            if isinstance(s, svgpathtools.path.Line):
+                loop.append(Line([s.start, s.end]))
+                cursor = s.end            
+            elif isinstance(s, svgpathtools.path.CubicBezier):
                 loop.append(Bezier([s.start, s.control1, s.control2, s.end]))
                 cursor = s.end
-            elif isinstance(s, svgpathtools.path.Line):
-                loop.append(Line([s.start, s.end]))
+            elif isinstance(s, svgpathtools.path.QuadraticBezier):
+                loop.append(Bezier([s.start, s.start+2/3*(s.control-s.start), s.end+2/3*(s.control-s.end), s.end]))
                 cursor = s.end
             elif isinstance(s, svgpathtools.path.Arc):
                 print("Input of Arcs not yet implemented")
 
             if cursor == start_of_loop:
-                #print(loop, is_hole(loop))
+                print(loop, is_hole(loop))
                 if is_hole(loop): interior.append(loop)
                 else: exterior=loop
                 if n!=len(svgPaths[dn]._segments)-1:
@@ -329,6 +334,3 @@ def print_domain_structure(list_of_domains):
             print("    ", I)
     return None
 
-svgPaths, _ = svgpathtools.svg2paths(r"E:\-.-\Projekte\CNC\Macha\svg\test05.svg")
-list_of_domains = create_list_of_domains(svgPaths)
-print_domain_structure(list_of_domains)
