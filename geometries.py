@@ -97,6 +97,19 @@ class Bezier():
         self.tbb_area = np.abs((self.tbb.real[0]-self.tbb.real[1])*(self.tbb.imag[0]-self.tbb.imag[1]))
         return self.tbb
     
+    def highest_point(self):
+        hp = self.points[0]
+        if self.points[-1].imag > hp.imag: hp = self.points[-1]        
+    
+        a = -3*self.points[0]+9*self.points[1]-9*self.points[2]+3*self.points[3]
+        b =  6*self.points[0]-12*self.points[1]+6*self.points[2]
+        c = -3*self.points[0]+3*self.points[1]
+        p_i_roots = np.polynomial.Polynomial([c.imag,b.imag,a.imag]).roots()
+        for tn in p_i_roots[(p_i_roots>0) & (p_i_roots<1)]:
+            if self.at(tn).imag > hp.imag: hp = self.at(tn)
+        return hp
+    
+    
 class Line():
     def __init__(self, points):
         assert np.array(points).shape==(2,)
@@ -124,6 +137,11 @@ class Line():
         self.tbb = np.array([self.points.real.min()+1j*self.points.imag.min(), self.points.real.max()+1j*self.points.imag.max()])
         self.tbb_area = np.abs((self.tbb.real[0]-self.tbb.real[1])*(self.tbb.imag[0]-self.tbb.imag[1]))
         return self.tbb    
+    
+    def highest_point(self):
+        hp = self.points[0]
+        if self.points[-1].imag > hp.imag: hp = self.points[-1]     
+        return hp
     
 class Arc():
     def __init__(self, start_point, end_point, radius):
@@ -209,7 +227,19 @@ class Arc():
         self.tbb_area = np.abs((self.tbb.real[0]-self.tbb.real[1])*(self.tbb.imag[0]-self.tbb.imag[1]))
         return self.tbb
     
+    def highest_point(self):
+        if self.start_point == self.end_point: return self.center + 1j*self.radius
+        hp = self.start_point
+        if self.end_point.imag > hp.imag: hp = self.end_point
 
+        a = (self.start_point-self.center).imag>=0
+        b = (self.start_point-self.center).real>=0
+        c = (self.end_point-self.center).imag>=0
+        d = (self.end_point-self.center).real>=0
+        if pole(a, b, c, d): 
+            if (self.center + 1j*self.radius).imag > hp.imag: hp = self.center + 1j*self.radius
+        return hp
+    
 '''
 functions
 '''

@@ -59,26 +59,26 @@ if __name__=="__main__":
     list_of_domains = create_list_of_domains(svgPaths)
     #print_domain_structure(list_of_domains)
 
-    # fig, ax = plt.subplots(figsize=(14,8))
+    fig, ax = plt.subplots(figsize=(14,8))
 
-    # t=np.linspace(0,1,1000)
-    # print(list_of_domains[0].exterior)
+    t=np.linspace(0,1,1000)
+    print(list_of_domains[0].exterior)
 
-    # for nn in range(len(list_of_domains)):
-    #     for curve in list_of_domains[nn].exterior:
-    #         cr = curve.at(t).reshape(100,10)
-    #         for n in range(100):
-    #             plt.plot(cr[n].real, cr[n].imag, color=cm.jet(n/100))
+    for nn in range(len(list_of_domains)):
+        for curve in list_of_domains[nn].exterior:
+            cr = curve.at(t).reshape(100,10)
+            for n in range(100):
+                plt.plot(cr[n].real, cr[n].imag, color=cm.jet(n/100))
 
-    #     for inr in list_of_domains[nn].interior:
-    #         for curve in inr:
-    #             cr = curve.at(t).reshape(100,10)
-    #             for n in range(100):
-    #                 plt.plot(cr[n].real, cr[n].imag, color=cm.jet(n/100))
+        for inr in list_of_domains[nn].interior:
+            for curve in inr:
+                cr = curve.at(t).reshape(100,10)
+                for n in range(100):
+                    plt.plot(cr[n].real, cr[n].imag, color=cm.jet(n/100))
             
 
     print_domain_structure(list_of_domains)
     medial_axis_transform(list_of_domains[0])
     
-    # ax.set_aspect("equal")
-    # plt.show()
+    ax.set_aspect("equal")
+    plt.show()
