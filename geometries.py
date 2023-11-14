@@ -30,9 +30,7 @@ class Domain():
 
     def __repr__(self):
         return ("Domain")
-
-
-
+    
 '''
 Curves
 '''
@@ -314,7 +312,7 @@ def create_list_of_domains(svgPaths):
                 print("Input of Arcs not yet implemented")
 
             if cursor == start_of_loop:
-                print(loop, is_hole(loop))
+                # print(loop, is_hole(loop))
                 if is_hole(loop): interior.append(loop)
                 else: exterior=loop
                 if n!=len(svgPaths[dn]._segments)-1:
