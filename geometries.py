@@ -144,7 +144,7 @@ class Line():
         return hp
     
 class Arc():
-    def __init__(self, start_point, end_point, radius):
+    def __init__(self, start_point, end_point, radius, angle_to_center=0):
         """
         the Arc path leads from start_point to end_point with a constant curvature 1/radius, 
         where radius>0 defines a left bended (counterclockwise) curve and r<0 defines a right bended (clockwise) curve
@@ -152,10 +152,16 @@ class Arc():
         with (s_point, e_point)=(end_point, start_point) if r<0,  else: (s_point, e_point)=(start_point, end_point)
         angles (self.alpha_1, self.alpha_2) refer to (self.s_point, self.e_point)
         """
-        assert np.abs(end_point-start_point) <= np.abs(2*radius)
-        self.center = P2R(np.sqrt(radius**2-np.abs((end_point - start_point)/2)**2), \
-                          np.angle(end_point - start_point) + np.pi/2 - np.pi*(radius<0)) + \
-                      (end_point + start_point)/2
+        #print(end_point, start_point, radius)
+        if np.abs(end_point-start_point) > np.abs(2*radius): # this can happen due to rounding
+            radius = np.abs(end_point-start_point)/2 * (np.abs(radius)/radius)
+        if start_point==end_point:
+            self.center = start_point + P2R(radius, angle_to_center)
+        else:
+            self.center = P2R(np.sqrt(radius**2-np.abs((end_point - start_point)/2)**2), \
+                            np.angle(end_point - start_point) + np.pi/2 - np.pi*(radius<0)) + \
+                        (end_point + start_point)/2
+
         self.radius = radius # can be positive or negative
         self.start_point = start_point
         self.end_point = end_point
@@ -265,6 +271,7 @@ def split_half(curve):
         return Line([p0, p1]), Line([p1, p2])    
     
     elif isinstance(curve, Arc):        
+        #print("curve.start_point, curve.at(0.5), curve.radius: ", curve.start_point, curve.at(0.5), curve.radius)
         return Arc(curve.start_point, curve.at(0.5), curve.radius), Arc(curve.at(0.5), curve.end_point, curve.radius)
     
 def find_intersection(obj1, obj2):    

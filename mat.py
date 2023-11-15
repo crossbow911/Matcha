@@ -1,5 +1,6 @@
 import numpy as np
 from geometries import *
+import time
 
 class tree_node():
     def __init__(self, value, level=0):
@@ -38,18 +39,36 @@ def medial_axis_transform(domain, ax):
 
         # determine highest points of each hole
         highest_point = 0-np.inf*1j
-        for curve in domain.interior[0]:
+        for curve in domain.interior.pop():
             p = curve.highest_point()
             if p.imag>highest_point.imag:
                 highest_point=p
 
         r=1
-        C=highest_point-1j*r
-        circle = Arc(highest_point, highest_point, r)
+        circle = Arc(highest_point, highest_point, r, angle_to_center=np.pi/2)
+        n_exp=-10
+        while True:
+            #print("highest_point: ", highest_point, r)
+            circle = Arc(highest_point, highest_point, r, angle_to_center=np.pi/2)
+            #for curve in domain.exterior:
+            n_intersections = 0
+            for curve in domain.exterior:
+                n_intersections += len(find_intersection(curve, circle))    
+            if n_intersections>0: 
+                r-=2**(-n_exp)
+            else: 
+                r+=2**(-n_exp)            
+            n_exp+=1
+            if n_exp==10: break
+            print("r: ", r)
+                # n_found=len(find_intersection(curve, circle))
+            time.sleep(0.1)
 
         t=np.linspace(0,1,1000)
-        ax.plot(circle.at(t).real, circle.at(t).imag, "r-", linewidth=2)
-        break
+        ax.plot(circle.at(t).real, circle.at(t).imag, "r-", linewidth=1)
+        
+
+
             #find contact circle
 
         # compute the highest point of each boundary;

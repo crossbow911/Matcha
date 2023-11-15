@@ -4,6 +4,7 @@ from utilities import *
 from geometries import *
 from mat import *
 import matplotlib.cm as cm
+import sys
 
 '''
 ToDo:
@@ -55,6 +56,17 @@ if __name__=="__main__":
     # plt.show()
 
 
+
+
+
+
+
+
+
+
+
+
+
     svgPaths, _ = svgpathtools.svg2paths(r"E:\-.-\Projekte\CNC\Macha\svg\test07.svg")
     list_of_domains = create_list_of_domains(svgPaths)
     #print_domain_structure(list_of_domains)
@@ -82,3 +94,18 @@ if __name__=="__main__":
 
     ax.set_aspect("equal")
     plt.show()
+
+
+
+
+    # fix, ax = plt.subplots(figsize=(10,4))
+    # t=np.linspace(0,1,1000)
+    # arc1 = Arc(1+1j, 1+1j, 2)
+
+    # arc1a, arc1b = split_half(arc1)
+    # arc1aa, arc1ab = split_half(arc1a)
+    # ax.plot(arc1aa.at(t).real, arc1aa.at(t).imag)
+    # ax.plot(arc1ab.at(t).real, arc1ab.at(t).imag)
+    # ax.plot(arc1b.at(t).real, arc1b.at(t).imag)
+    # ax.set_aspect("equal")
+    # plt.show()
