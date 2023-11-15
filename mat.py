@@ -1,4 +1,5 @@
 import numpy as np
+from geometries import *
 
 class tree_node():
     def __init__(self, value, level=0):
@@ -28,20 +29,29 @@ class tree_node():
     def add_child(self, value):
         self.children.append(tree_node(value, level=self.level+1))
 
-def medial_axis_transform(domain):
+def medial_axis_transform(domain, ax):
     v_node_n = 0
-    #kill homology
-    if len(domain.interior)==0: return 0
-    else:
-        Tree = tree_node("V"+str(v_node_n))
 
-        for interior in domain.interior:
-            highest_y_point = -np.inf
-            for curve in interior:
-                h = curve.bounding_box()[1].imag
-                if h>highest_y_point:
-                    highest_y_point=h
-            print(highest_y_point)
+    #kill homology
+    while len(domain.interior)>0:
+        #Tree = tree_node("V"+str(v_node_n))
+
+        # determine highest points of each hole
+        highest_point = 0-np.inf*1j
+        for curve in domain.interior[0]:
+            p = curve.highest_point()
+            if p.imag>highest_point.imag:
+                highest_point=p
+
+        r=1
+        C=highest_point-1j*r
+        circle = Arc(highest_point, highest_point, r)
+
+        t=np.linspace(0,1,1000)
+        ax.plot(circle.at(t).real, circle.at(t).imag, "r-", linewidth=2)
+        break
+            #find contact circle
+
         # compute the highest point of each boundary;
         # sort the boundary curves according to the y-coordinate
         # of the highest point;

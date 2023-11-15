@@ -78,7 +78,7 @@ if __name__=="__main__":
             
 
     print_domain_structure(list_of_domains)
-    medial_axis_transform(list_of_domains[0])
-    
+    medial_axis_transform(list_of_domains[0], ax)
+
     ax.set_aspect("equal")
     plt.show()
